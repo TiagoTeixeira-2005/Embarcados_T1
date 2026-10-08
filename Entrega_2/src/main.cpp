@@ -1,4 +1,6 @@
 #include "gpio.hpp"
+#include "cli/cli.hpp"
+#include "common/shutdown.hpp"
 
 #include <csignal>
 #include <signal.h>  
@@ -16,8 +18,6 @@
 #include <thread>
 
 using namespace std;
-
-//  Configuração de pinos
 static const PinConfig PINOS = {
     /*pwm*/          13,
     /*dir1*/         22,
@@ -29,27 +29,19 @@ static const PinConfig PINOS = {
 };
 
 static GpioModule g_gpio(PINOS);
-
-// Funções-trampolim exigidas pelo wiringPiISR
 static void isr_enc_a()        { g_gpio.on_encoder_edge(); }
 static void isr_enc_b()        { g_gpio.on_encoder_edge(); }
 static void isr_cortina()      { g_gpio.on_cortina_edge(); }
 static void isr_sensor_andar() { g_gpio.on_sensor_andar_edge(); }
-
-// Geometria da bancada
 static const map<int, int32_t> ANDARES = {{0, 0}, {1, 3000}, {2, 6000}};
 static constexpr int32_t TOLERANCIA_MM = 10;
 static constexpr int32_t LIMITE_INF = 0;
 static constexpr int32_t LIMITE_SUP = 6000;
-
-// Parâmetros do controle simples (ajustar na bancada real)
 static constexpr double DUTY_RAPIDO = 55.0;
 static constexpr double DUTY_LENTO = 15.0;
 static constexpr int32_t ZONA_LENTA = 500;
 static constexpr double PASSO_RAMPA = 2.0;
 static constexpr int PERIODO_MS = 20;
-
-// Estado auxiliar
 struct MedicaoBandeirola {
     bool valida = false;
     int32_t entrada = 0, saida = 0;
@@ -60,17 +52,14 @@ struct MedicaoBandeirola {
 static MedicaoBandeirola g_ultima_bandeirola;
 static int32_t g_bandeirola_entrada = 0;
 static bool g_bandeirola_em_curso = false;
-
-// Controle de parada (SIGINT)
 static atomic<bool> g_continuar{true};
 static volatile sig_atomic_t g_sigint = 0;
 
 static void tratar_sigint(int /*sinal*/) {
     g_sigint = 1;
     g_continuar.store(false); 
+    solicitar_encerramento();
 }
-
-// Utilidades
 static int andar_mais_proximo(int32_t pos) {
     int melhor = ANDARES.begin()->first;
     int32_t melhor_dist = abs(pos - ANDARES.begin()->second);
@@ -97,8 +86,6 @@ static void dormir_ms(int ms) {
 }
 
 static void cabine_status();
-
-// Interceptação de comandos durante um movimento em curso
 enum class ComandoDuranteMovimento { Nenhum, Frear, Continuar };
 
 static ComandoDuranteMovimento verificar_comando_durante_movimento(int ms_espera) {
@@ -153,8 +140,6 @@ static ComandoDuranteMovimento verificar_comando_durante_movimento(int ms_espera
     fflush(stdout);
     return ComandoDuranteMovimento::Continuar;
 }
-
-// Anuncia a passagem/chegada por um andar durante um comando MANUAL
 static void anunciar_se_chegou_andar(int32_t pos, int &ultimo_anunciado) {
     if (!esta_nivelado(pos)) return;
     int andar = andar_mais_proximo(pos);
@@ -164,8 +149,6 @@ static void anunciar_se_chegou_andar(int32_t pos, int &ultimo_anunciado) {
            andar, pos);
     fflush(stdout);
 }
-
-// Callbacks de eventos
 static void ao_mudar_cortina(bool obstruida) {
     printf("\n[CORTINA] %s\n> ",
            obstruida ? "Obstrucao detectada (porta bloqueada)" : "Porta liberada");
@@ -195,8 +178,6 @@ static void ao_mudar_sensor_andar(bool ativo, int32_t pos) {
         fflush(stdout);
     }
 }
-
-// Comando: andar <N>
 static void cabine_andar(int andar) {
     auto it = ANDARES.find(andar);
     if (it == ANDARES.end()) {
@@ -266,8 +247,6 @@ static void cabine_andar(int andar) {
                nivelado ? "nivelado" : "fora da tolerancia");
     }
 }
-
-// Comando: motor manual (subir/descer, duração opcional)
 static void cabine_motor(Direcao direcao, double duty_alvo, double duracao_segundos, bool duracao_definida) {
     int32_t pos = g_gpio.get_position();
     if (fim_de_curso(direcao, pos)) {
@@ -385,6 +364,7 @@ static void imprimir_ajuda() {
         "  motor livre                             - solta o motor (DIR1=DIR2=0)\n"
         "  motor freio                             - trava o motor (DIR1=DIR2=1)\n"
         "  estado                                   - imprime o estado atual da cabine\n"
+        "  uart [arquivo]                           - menu UART/MODBUS da Entrega 2 (padrao: config.ini)\n"
         "  ajuda                                    - mostra esta mensagem\n"
         "  sair                                     - encerra o programa (equivalente a Ctrl+C)\n";
 }
@@ -453,6 +433,12 @@ int main() {
 
         } else if (cmd == "estado") {
             cabine_status();
+
+        } else if (cmd == "uart") {
+            string caminho = "config.ini";
+            string argumento;
+            if (iss >> argumento) caminho = argumento;
+            executar_menu_uart(caminho);
 
         } else if (cmd == "ajuda") {
             imprimir_ajuda();

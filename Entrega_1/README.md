@@ -9,8 +9,8 @@ Este README apresenta como o programa da Cabine 1 foi organizado, como executá-
 ## Alunos
 |Matrícula | Aluno |
 | -- | -- |
-|  Matricula 1  |  Nome 1  |
-|  Matricula 2  |  Nome 2  |
+| 23/1037656  |  Arthur Guilherme Aquino Santos |
+| 23/1026581  |  Tiago Lemes Teixeira |
 
 
 ## Sumário
@@ -26,7 +26,9 @@ Este README apresenta como o programa da Cabine 1 foi organizado, como executá-
   - [3.5. Proteção de fim de curso](#35-proteção-de-fim-de-curso)
   - [3.6. Tratamento de SIGINT](#36-tratamento-de-sigint)
 - [4. Requisitos](#4-requisitos)
-- [5. Gravação](#5-gravação)
+- [5. Testes de funcionamento](#5-testes-de-funcionamento)
+- [6. Gravação](#6-gravação)
+
 ---
 
 ## 1. Como compilar e executar
@@ -196,11 +198,9 @@ Dessa forma, o programa encerra de maneira controlada e evita que o motor perman
 
 ---
 
-## 5. Gravação
+# 5. Testes de Funcionamento
 
-O vídeo de demonstração pode ser acessado em: [Link para o vídeo](URL_DO_VIDEO).
-
-Para a gravação, foi seguida uma sequência de testes para verificar o funcionamento dos principais requisitos do projeto:
+Para verificar se esta primeira etapa implementava corretamente os requisitos necessários, foi seguida uma sequência de testes para avaliar o funcionamento dos principais recursos do projeto:
 
 1. Executar `estado` para verificar o estado inicial da cabine.
 
@@ -214,6 +214,17 @@ Para a gravação, foi seguida uma sequência de testes para verificar o funcion
 
 6. Deixar o comando `motor descer 20` em execução, sem duração definida, próximo ao andar 0 e verificar se a proteção de fim de curso é acionada automaticamente, exibindo a mensagem `[CABINE] Fim de curso atingido...`.
 
-7. Executar `top` em outra sessão SSH para verificar o uso de CPU do programa durante a execução.
+7. Pressionar `Ctrl+C` para verificar o encerramento correto do programa, incluindo a parada do motor e a liberação dos recursos utilizados.
 
-8. Pressionar `Ctrl+C` para verificar o encerramento correto do programa, incluindo a parada do motor e a liberação dos recursos utilizados.
+---
+
+## 6. Gravação
+
+O vídeo de demonstração pode ser acessado em: [https://youtu.be/qJEqOIYnt10?si=usDj0QK0SpByS_rl](https://youtu.be/qJEqOIYnt10?si=usDj0QK0SpByS_rl).
+
+O vídeo apresenta a demonstração dos requisitos solicitados no README do projeto, incluindo:
+
+- execução do comando `andar` para os três andares;
+- leitura do encoder e acompanhamento da posição pelo widget;
+- teste da cortina de segurança utilizando o botão **"Obstruir porta"**;
+- medição de uma bandeirola utilizando as duas bordas e cálculo do centro estimado.
